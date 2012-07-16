@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+        android:sharedUserId="android.uid.system"
+        android:versionCode="7"
+        android:versionName="2.1-update1"
+        package="com.motorola.android.fmradio">
+
+    <uses-sdk android:minSdkVersion="7" android:targetSdkVersion="7" />
+    <uses-permission android:name="com.motorola.android.permission.FMRADIO" />
+
+    <permission android:label="FMRadio_Service" android:name="com.motorola.android.permission.USEFMRADIO" android:protectionLevel="normal" />
+
+    <application android:label="@string/app_name">
+        <service android:name="FMRadioService" android:permission="com.motorola.android.permission.USEFMRADIO">
+            <intent-filter>
+                <action android:name="com.motorola.android.fmradio.FMRADIO_SERVICE" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>
