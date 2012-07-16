@@ -577,8 +577,12 @@ public class FMRadioService extends Service implements IFMCommand {
 
         @Override
         public boolean stopSeek() throws RemoteException {
-            /* XXX: need to remove SEEK_COMPLETE if result true */
-            return mFMRadioJNI.stopSeek();
+            if (mFMRadioJNI.stopSeek()) {
+                FMRadioUtil.removeCmdFromList(IFMCommand.FM_CMD_SEEK_COMPLETE, mFMCmdList);
+                return true;
+            }
+
+            return false;
         }
 
         @Override
