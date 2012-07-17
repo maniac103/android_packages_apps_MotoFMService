@@ -18,8 +18,8 @@ public class FMRadioService extends Service implements IFMCommand {
     private static final String TAG = "FMRadioService";
     private static final boolean LOGV = true;
 
-    private static final String DEFAULT_FREQ = "87500";
-    private static final String EMPTY_RESULT = "";
+    /* service name of fmradioserver */
+    private static final String SERVICE_FMRADIO = "fmradio";
 
     private boolean mBeginInvokeCB = false;
     private List<CBEntity> mCBList = new ArrayList<CBEntity>();
@@ -27,27 +27,27 @@ public class FMRadioService extends Service implements IFMCommand {
             new RemoteCallbackList<IFMRadioServiceCallback>();
     private boolean mIgnoreCallBack = false;
 
-    protected int mBand = IFMRadioConstant.FMRADIO_BAND0;
-    protected int mCurrentFreq;
-    protected int mEdgeSeekCount = 0;
+    private int mBand = IFMRadioConstant.FMRADIO_BAND0;
+    private int mCurrentFreq;
+    private int mEdgeSeekCount = 0;
     private List<Integer> mFMCmdList = new ArrayList<Integer>();
     private FMRadioPlayer mFMRadioJNI;
-    protected boolean mScanning = false;
-    protected boolean mStopScan = true;
-    protected boolean mIsEnable = false;
-    protected boolean mRdsEnabled = false;
-    protected boolean mScanBegin = false;
-    protected int mSeeking = IFMRadioConstant.FMRADIO_SEEK_DIRECTION_NONE;
+    private boolean mScanning = false;
+    private boolean mStopScan = true;
+    private boolean mIsEnable = false;
+    private boolean mRdsEnabled = false;
+    private boolean mScanBegin = false;
+    private boolean mSeekWrap = false;
     private boolean mPowerOffComplete = false;
+    private int mSeeking = IFMRadioConstant.FMRADIO_SEEK_DIRECTION_NONE;
     private int mRdsMode = -1;
-    protected int mRdsPI;
-    protected String mRdsPS;
-    protected int mRdsPTY;
-    protected String mRdsRT;
-    protected String mRdsRTPlus;
-    protected boolean mSeekWrap = false;
+    private int mRdsPI;
+    private String mRdsPS;
+    private int mRdsPTY;
+    private String mRdsRT;
+    private String mRdsRTPlus;
 
-    class CBEntity {
+    private static class CBEntity {
         int cmd;
         int status;
         Object value;
@@ -344,7 +344,7 @@ public class FMRadioService extends Service implements IFMCommand {
                 return mRdsPS;
             } else if (mRdsMode == IFMRadioConstant.FMRADIO_RDS_MODE_RBDS && mRdsPI != -1) {
                 char[] piArray = FMRadioUtil.decodePI(mRdsPI);
-                if (piArray != null && piArray.length >= 1 && piArray[0] != 0) {
+                if (piArray != null) {
                     return new String(piArray);
                 }
             }
@@ -609,8 +609,8 @@ public class FMRadioService extends Service implements IFMCommand {
 
     @Override
     public IBinder onBind(Intent intent) {
-        if (LOGV) Log.v(TAG, "onBind***");
-        SystemService.start("fmradio"); /* XXX */
+        if (LOGV) Log.v(TAG, "onBind()");
+        SystemService.start(SERVICE_FMRADIO);
 
         mFMRadioJNI = new FMRadioPlayer();
         mFMRadioJNI.setOnCommandCompleteListener(mCommandComplListener);
@@ -640,7 +640,7 @@ public class FMRadioService extends Service implements IFMCommand {
     public void onRebind(Intent intent) {
         if (LOGV) Log.v(TAG, "onRebind()");
 
-        SystemService.start("fmradio"); /* XXX */
+        SystemService.start(SERVICE_FMRADIO);
         mFMRadioJNI = new FMRadioPlayer();
         mFMRadioJNI.setOnCommandCompleteListener(mCommandComplListener);
 
@@ -661,15 +661,12 @@ public class FMRadioService extends Service implements IFMCommand {
         mFMCmdList.clear();
         FMRadioUtil.addCmdToList(IFMCommand.FM_CMD_DISABLE_COMPLETE, mFMCmdList);
 
-        boolean rst = mFMRadioJNI.powerOffDevice();
-        if (!rst) {
-            FMRadioUtil.removeCmdFromList(IFMCommand.FM_CMD_DISABLE_COMPLETE, mFMCmdList);
-        }
+        mFMRadioJNI.powerOffDevice();
         FMRadioUtil.sleep(FMRadioUtil.FM_POWEROFF_TIME);
         mFMCmdList.clear();
         mCallbacks.kill();
         mFMRadioJNI.setOnCommandCompleteListener(null);
-        SystemService.stop("fmradio"); /* XXX */
+        SystemService.stop(SERVICE_FMRADIO);
 
         return true;
     }
@@ -732,6 +729,7 @@ public class FMRadioService extends Service implements IFMCommand {
                     IFMRadioServiceCallback callback = mCallbacks.getBroadcastItem(i);
                     callback.onCommandComplete(cmd, status, value.toString());
                 } catch (RemoteException e) {
+                    Log.d(TAG, "Could not invoke service callback", e);
                 }
             }
         }

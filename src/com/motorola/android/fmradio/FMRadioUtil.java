@@ -1,5 +1,6 @@
 package com.motorola.android.fmradio;
 
+import android.text.TextUtils;
 import android.util.Log;
 
 import java.util.HashMap;
@@ -178,7 +179,15 @@ public class FMRadioUtil implements IFMRadioConstant {
     }
 
     public static boolean checkCmdListComplete(List<Integer> cmdList) {
-        return cmdList != null && cmdList.size() == 0;
+        if (cmdList == null) {
+            return false;
+        }
+        if (cmdList.isEmpty()) {
+            return true;
+        }
+
+        Log.w(TAG, "Command list not empty, pending commands: " + TextUtils.join(" ", cmdList));
+        return false;
     }
 
     public static boolean checkInt(Object value) {
@@ -204,10 +213,7 @@ public class FMRadioUtil implements IFMRadioConstant {
     }
 
     public static boolean checkStatus(int status) {
-        if (status == 1 /* XXX */) {
-            return true;
-        }
-        return false;
+        return status == IFMRadioConstant.FMRADIO_STATUS_OK;
     }
 
     public static boolean checkStatusAndInt(int status, Object value) {
@@ -219,65 +225,60 @@ public class FMRadioUtil implements IFMRadioConstant {
     }
 
     public static char[] decodePI(int pi) {
-        char[] rds_pi_str = new char[1];
         if ((pi & 0xf00) == 0) {
             pi = ((pi & 0xf000) >> 4 | 0xa000) | (pi & 0xff);
         } else if ((pi & 0xff) == 0) {
             pi = ((pi & 0xff00) >> 8) | 0xaf00;
         }
 
-        if (pi >= 0x9950 || pi < 0x1000) {
-            rds_pi_str[0] = 0;
-            if (pi >= 0x9950 && threeLetters.containsKey(pi)) {
-                String str = threeLetters.get(pi);
-                if (str != null && str.trim().length() == 3) {
-                    rds_pi_str = new char[3];
-                    char[] strArray = str.toCharArray();
-                    rds_pi_str[0] = strArray[0];
-                    rds_pi_str[1] = strArray[1];
-                    rds_pi_str[2] = strArray[2];
-                }
-            }
-        } else {
-            rds_pi_str = new char[4];
+        if (pi >= 0x9950 && threeLetters.containsKey(pi)) {
+            return threeLetters.get(pi).toCharArray();
+        }
+
+        if (pi >= 0x1000 && pi < 0x9950) {
+            char[] info = new char[4];
+
             if (pi < 0x54a8) {
-                rds_pi_str[0] = 0x4b;
+                info[0] = 'K';
                 pi -= 0x1000;
             } else {
                 pi -= 0x54a8;
-                rds_pi_str[0] = 0x57;
+                info[0] = 'W';
             }
-            rds_pi_str[3] = (char) ((pi % 0x1a) + 'A');
+
+            info[3] = (char) ((pi % 0x1a) + 'A');
             pi = pi / 0x1a;
-            rds_pi_str[2] = (char) ((pi % 0x1a) + 'A');
+            info[2] = (char) ((pi % 0x1a) + 'A');
             pi = pi  / 0x1a;
-            rds_pi_str[1] = (char) ((pi % 0x1a) + 'A');
+            info[1] = (char) ((pi % 0x1a) + 'A');
+
+            return info;
         }
 
-        return rds_pi_str;
+        return null;
     }
 
     public static int getBandByLocale(Locale locale) {
         if (locale == null) {
-            return 0;
+            return IFMRadioConstant.FMRADIO_BAND0;
         }
 
         String country = locale.getISO3Country();
         if (isBand3(country)) {
-            return 3;
+            return IFMRadioConstant.FMRADIO_BAND3;
         }
         if (isBand2(country)) {
-            return 2;
+            return IFMRadioConstant.FMRADIO_BAND2;
         }
         if (isBand0(country)) {
-            return 0;
+            return IFMRadioConstant.FMRADIO_BAND0;
         }
 
-        return 1;
+        return IFMRadioConstant.FMRADIO_BAND1;
     }
 
     public static int getBandForStack(int band) {
-        return band == 3 ? 1 : 0;
+        return band == IFMRadioConstant.FMRADIO_BAND3 ? 1 : 0;
     }
 
     public static boolean isBand0(String country) {
