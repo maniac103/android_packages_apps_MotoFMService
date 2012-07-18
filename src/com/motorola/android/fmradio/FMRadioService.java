@@ -174,7 +174,7 @@ public class FMRadioService extends Service implements IFMCommand {
                         if (FMRadioUtil.checkStatusAndInt(status, value)) {
                             int soughtFreq = (Integer) value;
 
-                            if (mCurrentFreq > soughtFreq) {
+                            if (mCurrentFreq < soughtFreq) {
                                 mCurrentFreq = soughtFreq;
                                 cmd = IFMCommand.FM_CMD_SCANNING;
                                 if (mStopScan) {
